@@ -49,9 +49,10 @@ def download_arquivo():
         navegador.find_element(By.ID, "import").click()
         # Esperando a caixa de pesquisa desaparecer
         WebDriverWait(navegador, 60).until(EC.invisibility_of_element_located(By.ID, "wait_box"))
+        # Iniciando download
+        WebDriverWait(navegador, 600).until(EC.invisibility_of_element_located((By.ID, "wait_box")))
+
         
-
-
 
 
         time.sleep(15)
