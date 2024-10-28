@@ -16,7 +16,7 @@ def download_arquivo(uf):
         # Definindo a url a ser acessada
         url_anatel = "https://sistemas.anatel.gov.br/se/public/view/b/licenciamento.php"
 
-        # criando uma isntancia do chrome_options
+        # criando uma instancia do chrome_options
         opcoes = webdriver.ChromeOptions()
         #opcoes.add_argument("--headless") # Argumento para baixar em segundo plano
         opcoes.add_experimental_option("prefs", {
@@ -124,7 +124,7 @@ tempo_limite = 300
 intervalo = 10
 # Criando lista com as unidades federativas
 UFs = ["00","AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"]
-# criando lista para iterar e garantir que baixe o arquivo de todos os estados.
+# criando lista para iterar e que baixe o arquivo de todos os estados.
 qtd_estados = list(range(1,2))#28))
 
 # Iniciando nossos downloads
