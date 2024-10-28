@@ -1,6 +1,8 @@
 import os
 import shutil
 import time
+import zipfile
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -9,14 +11,10 @@ from selenium.webdriver.support.ui import Select
 
 
 # Função para download do arquivo
-def download_arquivo(i):
+def download_arquivo(uf):
     try:
         # Definindo a url a ser acessada
         url_anatel = "https://sistemas.anatel.gov.br/se/public/view/b/licenciamento.php"
-        
-        # Criando pasta temporária para receber os downloads
-        caminho_temp = os.path.join(os.getcwd(), "mosaico")
-        os.makedirs(caminho_temp, exist_ok=True)
 
         # criando uma isntancia do chrome_options
         opcoes = webdriver.ChromeOptions()
@@ -43,8 +41,7 @@ def download_arquivo(i):
         # Esperando carregamento do próximo elemento.
         WebDriverWait(navegador, 60).until(EC.presence_of_element_located((By.ID, "fa_uf")))
         # Abrindo dropdown "fa_uf" e selecionando o estado (UF)
-        print(UFs[i])
-        Select(navegador.find_element(By.ID, "fa_uf")).select_by_value(f"{UFs[i]}")
+        Select(navegador.find_element(By.ID, "fa_uf")).select_by_value(f"{UFs[uf]}")
         # Esperando carregamento do próximo elemento.
         WebDriverWait(navegador, 60).until(EC.presence_of_element_located((By.ID, "import")))
         # Clicando em enviar
@@ -53,7 +50,7 @@ def download_arquivo(i):
         WebDriverWait(navegador, 60).until(EC.invisibility_of_element_located((By.ID, "wait_box")))
         # Esperando carregamento do próximo elemento.
         WebDriverWait(navegador, 60).until(EC.presence_of_element_located((By.ID, "download_csv")))
-        time.sleep(1)
+        time.sleep(2)
         # Iniciando download
         navegador.find_element(By.ID, "download_csv").click()
         # Esperando a caixa de processamento desaparecer
@@ -61,14 +58,9 @@ def download_arquivo(i):
         # A partir desse ponto vamos presumir que o download tenha iniciado. Agora vamos monitorar a pasta destino para saber se o download foi um sucesso.
 
         # Iniciando monitoramento
-        resultado_dowload = verifica_download(caminho_temp, tempo_limite, intervalo)
-
-        if resultado_dowload:
-            caminho_completo = os.path.join(caminho_temp, resultado_dowload)
-            return caminho_completo
-        else:
-            print("Arquivo .zip não foi encontrado.")
-            return False
+        caminho_dowload = verifica_download(caminho_temp, tempo_limite, intervalo)
+        # Retornando o resultado da verificação
+        return caminho_dowload
     except Exception as error:
         # Definindo o que fazer em caso de erro
         print(error)
@@ -91,28 +83,65 @@ def verifica_download(caminho_temp, tempo_limite, intervalo):
             # Verificando se o arquivo existe na pasta
             if arquivo_zip:
                 print("Arquivo .zip encontrado:", arquivo_zip[0])
-                return arquivo_zip
+                caminho_completo = os.path.join(caminho_temp, arquivo_zip[0])
+                return caminho_completo
             else:
                 print("Arquivo .zip não encontrado, verificando novamente em 5 segundos...")
                 time.sleep(intervalo)
         # Falha no download
-        print("Tempo limite alcançado.")
+        print("Tempo limite alcançado. Arquivo .zip não foi encontrado.")
         return False
     except Exception as error:
         # Definindo o que fazer em caso de erro
         print(error)
 
+
+# Função para extrair o CSV do ZIP.
+def extrai_csv(caminho_zip):
+    # Abrindo ZIP
+    with zipfile.ZipFile(caminho_zip, 'r') as zip:
+        # Buscando por arquivos CSV
+        arquivos_csv = [arquivo for arquivo in zip.namelist() if arquivo.endswith('.csv')]
+        # Verificando o resultado da busca anterior
+        if arquivos_csv:
+            arquivo_csv = arquivos_csv[0]
+            # Abrindo e lendo o CSV
+            with zip.open(arquivo_csv) as csv:
+                return pd.read_csv(csv)
+        else:
+            print("Não econtrado arquivo cvs no zip.")
+
+
+# Função para ETL do arquivo.
+def processa_arquivo(arquivo):
+    print("xxxx")
+
+
 # Definindo algumas constantes
 # Tempo limite para conclusão do download
 tempo_limite = 300
 # Intervalo entre cada verificação do download
-intervalo = 5
+intervalo = 10
 # Criando lista com as unidades federativas
 UFs = ["00","AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"]
 # criando lista para iterar e garantir que baixe o arquivo de todos os estados.
-qtd_estados = list(range(1,28))
+qtd_estados = list(range(1,2))#28))
 
-# Iniciando nosso download
-for i in qtd_estados:
-    caminho_zip = download_arquivo(i)
+# Iniciando nossos downloads
+for uf in qtd_estados:
+    # Criando pasta temporária para receber o download
+    caminho_temp = os.path.join(os.getcwd(),f"mosaico - {UFs[uf]}")
+    os.makedirs(caminho_temp, exist_ok=True)
+    # Iniciando download 
+    caminho_zip = download_arquivo(uf)
     
+    # Verificando resultado do download
+    if caminho_zip == False:
+        print(f"Erro no download da UF {UFs[uf]}.")
+        shutil.rmtree(caminho_temp)
+    else:
+        print("Sucesso no download!")
+        csv = extrai_csv(caminho_zip)
+        print(csv.head())
+        # csv = processa_arquivo(csv)
+        shutil.rmtree(caminho_temp)
