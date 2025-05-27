@@ -114,7 +114,73 @@ def extrai_csv(caminho_zip):
 
 # Função para ETL do arquivo.
 def processa_arquivo(arquivo):
-    print("xxxx")
+    print(f"Iniciando processamento do arquivo {UFs[uf]}.csv")
+
+    # Removendo espaços dos valores
+    arquivo = arquivo.astype(str).map(str.strip)
+    # Removendo espaços dos nomes das colunas
+    arquivo.columns = arquivo.columns.str.strip()
+
+    # Selecionando as colunas
+    arquivo = arquivo[['NomeEntidade','NumFistel','NumServico','NumEstacao','SiglaUf','CodMunicipio','Tecnologia','FreqTxMHz','ClassInfraFisica','AlturaAntena','Latitude','Longitude',
+                       'DataLicenciamento','DataPrimeiroLicenciamento','DataValidade','Municipio.NomeMunicipio']]
+    
+    # Renomeando as colunas
+    arquivo = arquivo.rename(
+        columns={
+            'NomeEntidade' : "Operadora",
+            'SiglaUf' : "UF",
+            'FreqTxMHz' : "Frequencia",
+            'ClassInfraFisica' : "TipoInfra",
+            'DataLicenciamento' : "DataUltimoLicenciamento",
+            'Municipio.NomeMunicipio' : "NomeMunicipio"
+        }
+    )
+
+    # Convertendo os tipos corretamente
+    arquivo = arquivo.astype({
+        'Operadora': 'string',  
+        'NumFistel': 'int',  
+        'NumServico': 'int',  
+        'NumEstacao': 'int',  
+        'UF': 'string',
+        'CodMunicipio': 'int',
+        'Tecnologia': 'string',
+        'Frequencia': 'float',
+        'TipoInfra': 'string',
+        'AlturaAntena': 'float',
+        'Latitude': 'float', 
+        'Longitude': 'float',
+        'DataUltimoLicenciamento': 'datetime64[ns]',
+        'DataPrimeiroLicenciamento': 'datetime64[ns]',
+        'DataValidade': 'datetime64[ns]',
+        'NomeMunicipio': 'str'
+    })
+    arquivo['Frequencia'] = arquivo['Frequencia'].astype(int)
+    arquivo['TipoInfra'] = arquivo['TipoInfra'].replace('nan','Nao Especificado')
+
+    # Filtrando os dados. Vamos utilizar apenas os dados de licenciamento movel
+    arquivo = arquivo[arquivo['NumServico'] == 10]
+
+    # Renomeando valores da coluna Operadora
+    arquivo['Operadora'] = arquivo['Operadora'].replace({
+        'CLARO S.A.' : "CLARO",
+        'TELEFONICA BRASIL S.A.' : "VIVO",
+        'Telefonica Brasil S.a.':"VIVO",
+        'TIM S A' : "TIM",
+        'TIM S/A' : "TIM"
+    })
+
+    # Substituindo os valores de tecnologia de acordo com a geração correspondente
+    arquivo['Tecnologia'] = arquivo['Tecnologia'].replace({
+        'GSM': '2G',
+        'WCDMA': '3G',
+        'LTE': '4G',
+        'NR': '5G'
+    })
+
+    return arquivo
+
 
 
 # Definindo algumas constantes
@@ -125,12 +191,12 @@ intervalo = 10
 # Criando lista com as unidades federativas
 UFs = ["00","AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"]
 # criando lista para iterar e que baixe o arquivo de todos os estados.
-qtd_estados = list(range(1,2))#28))
+qtd_estados = list(range(1,28))
 
 # Iniciando nossos downloads
 for uf in qtd_estados:
     # Criando pasta temporária para receber o download
-    caminho_temp = os.path.join(os.getcwd(),f"mosaico - {UFs[uf]}")
+    caminho_temp = os.path.join(os.getcwd(), f"mosaico - {UFs[uf]}")
     os.makedirs(caminho_temp, exist_ok=True)
     # Iniciando download 
     caminho_zip = download_arquivo(uf)
@@ -142,6 +208,6 @@ for uf in qtd_estados:
     else:
         print("Sucesso no download!")
         csv = extrai_csv(caminho_zip)
-        print(csv.head())
-        # csv = processa_arquivo(csv)
+        csv = processa_arquivo(csv)
+        csv.to_csv(os.path.join(os.getcwd(), f"Arquivos\{UFs[uf]}.csv"), index=False)
         shutil.rmtree(caminho_temp)
