@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from datetime import datetime
+from processador_dados_anatel import ProcessadorDadosAnatel
 
 
 # Função para download do arquivo
@@ -24,7 +25,7 @@ def download_arquivo(uf):
             "download.default_directory": caminho_temp,
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
-            "safebrowsing.enabled": True
+            "safeBrowse.enabled": True
         })
 
         # criando uma instancia do Chrome e definindo nossas configurações (opcoes).
@@ -111,102 +112,19 @@ def extrai_csv(caminho_zip):
                 return pd.read_csv(csv, encoding='latin1', on_bad_lines='skip')
         else:
             print("Não econtrado arquivo cvs no zip.")
+            return None
 
-
-# Função para ETL do arquivo.
-def processa_arquivo(arquivo):
-    print(f"Iniciando processamento do arquivo {UFs[uf]}.csv")
-
-    # Removendo espaços dos valores
-    arquivo = arquivo.astype(str).map(str.strip)
-    # Removendo espaços dos nomes das colunas
-    arquivo.columns = arquivo.columns.str.strip()
-
-    # Selecionando as colunas
-    arquivo = arquivo[['NomeEntidade','NumFistel','NumServico','NumEstacao','SiglaUf','CodMunicipio','Tecnologia','FreqTxMHz','ClassInfraFisica','AlturaAntena','Latitude','Longitude',
-                       'DataLicenciamento','DataPrimeiroLicenciamento','DataValidade','Municipio.NomeMunicipio']]
-
-    # Renomeando as colunas
-    arquivo = arquivo.rename(
-        columns={
-            'NomeEntidade' : "Operadora",
-            'SiglaUf' : "UF",
-            'FreqTxMHz' : "Frequencia",
-            'ClassInfraFisica' : "TipoInfra",
-            'DataLicenciamento' : "DataUltimoLicenciamento",
-            'Municipio.NomeMunicipio' : "NomeMunicipio"
-        }
-    )
-
-    # Convertendo os tipos corretamente
-    # Substituindo [,;] por .
-    arquivo['AlturaAntena'] = arquivo['AlturaAntena'].astype(str).str.replace('[,;]', '.', regex=True)
-    # Dropando linhas com datas inválidas
-    arquivo['DataPrimeiroLicenciamento'] = pd.to_datetime(arquivo['DataPrimeiroLicenciamento'], errors='coerce')
-    arquivo.dropna(subset=['DataPrimeiroLicenciamento'], inplace=True)
-    arquivo['DataUltimoLicenciamento'] = pd.to_datetime(arquivo['DataUltimoLicenciamento'], errors='coerce')
-    arquivo.dropna(subset=['DataUltimoLicenciamento'], inplace=True)
-    arquivo['NumEstacao'] = pd.to_datetime(arquivo['NumEstacao'], errors='coerce')
-    arquivo.dropna(subset=['NumEstacao'], inplace=True)
-    # Tipando as colunas
-    arquivo = arquivo.astype({
-        'Operadora': 'string',  
-        'NumFistel': 'int',  
-        'NumServico': 'int',  
-        'UF': 'string',
-        'CodMunicipio': 'int',
-        'Tecnologia': 'string',
-        'TipoInfra': 'string',
-        'Latitude': 'float', 
-        'Longitude': 'float',
-        'DataUltimoLicenciamento': 'datetime64[ns]',
-        'DataPrimeiroLicenciamento': 'datetime64[ns]',
-        'DataValidade': 'datetime64[ns]',
-        'NomeMunicipio': 'str'
-    })
-    # Descartando colunas com frequencias ausentes
-    arquivo['Frequencia'] = pd.to_numeric(arquivo['Frequencia'], errors='coerce')
-    arquivo.dropna(subset=['Frequencia'], inplace=True)
-    arquivo['AlturaAntena'] = pd.to_numeric(arquivo['AlturaAntena'], errors='coerce')
-    arquivo.dropna(subset=['AlturaAntena'], inplace=True)
-    
-    # Filtrando os dados. Vamos utilizar apenas os dados de licenciamento movel
-    arquivo = arquivo[arquivo['NumServico'] == 10]
-    
-    # Substituindo valores da coluna TipoInfra
-    arquivo['TipoInfra'] = arquivo['TipoInfra'].replace('nan','Nao Especificado')
-
-    # Renomeando valores da coluna Operadora
-    arquivo['Operadora'] = arquivo['Operadora'].replace({
-        'CLARO S.A.' : "CLARO",
-        'TELEFONICA BRASIL S.A.' : "VIVO",
-        'Telefonica Brasil S.a.':"VIVO",
-        'TIM S A' : "TIM",
-        'TIM S/A' : "TIM",
-        'Brisanet Servicos de Telecomunicacoes S.A.': "BRISANET"
-    })
-
-    # Substituindo os valores de tecnologia de acordo com a geração correspondente
-    arquivo['Tecnologia'] = arquivo['Tecnologia'].replace({
-        'GSM': "2G",
-        'WCDMA': "3G",
-        'WDCMA': "3G",
-        'LTE': "4G",
-        'NR': "5G",
-        '': "Nao Informado"
-    })
-
-    # Criando coluna com a data do download dos registros
-    arquivo['DataDownload'] = datetime.now().strftime("%d/%m/%Y")
-
-    return arquivo
 
 # Função para concatenar os arquivos
 def concatenar_arquivos(caminho_pasta):
     print(f"Iniciando concatenação dos arquivos")
     # Criando variável concatenado para receber os dados
     concatenado = []
-    
+
+    if not os.path.exists(caminho_pasta): 
+        print(f"A pasta '{caminho_pasta}' não existe.")
+        return None
+
     for arquivo in os.listdir(caminho_pasta):
         if arquivo.endswith(".csv"):
             caminho_completo = os.path.join(caminho_pasta, arquivo)
@@ -217,9 +135,8 @@ def concatenar_arquivos(caminho_pasta):
                 print(f"Erro ao ler '{arquivo}': {e}. Este arquivo será ignorado.")
 
     if not concatenado:
-        mensagem_erro = "Nenhum arquivo csv pôde ser lido com sucesso."
-        # Retorna um DataFrame com a mensagem de erro
-        return pd.DataFrame({'Erro': [mensagem_erro]})
+        print("Nenhum arquivo csv pôde ser lido com sucesso.")
+        return None
 
     df_concatenado = pd.concat(concatenado, ignore_index=True)
     print("Concatenação concluída!")
@@ -233,34 +150,52 @@ intervalo = 10
 # Criando lista com as unidades federativas
 UFs = ["00","AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"]
 # criando lista para iterar e que baixe o arquivo de todos os estados.
-qtd_estados = list(range(1,28))
+qtd_estados = list(range(1,3))#28))
 
 # Iniciando nossos downloads
 for uf in qtd_estados:
     # Criando pasta temporária para receber o download
     caminho_temp = os.path.join(os.getcwd(), f"Mosaico - {UFs[uf]}")
     os.makedirs(caminho_temp, exist_ok=True)
-    # Iniciando download 
+    # Iniciando download
     caminho_zip = download_arquivo(uf)
-    
+
     # Verificando resultado do download
     if caminho_zip == False:
         print(f"Erro no download da UF {UFs[uf]}.")
         shutil.rmtree(caminho_temp)
     else:
         print("Sucesso no download!")
-        csv = extrai_csv(caminho_zip)
-        csv = processa_arquivo(csv)
-        # Criando pasta para armazenar os arquivos
-        caminho_arquivos = os.path.join(os.getcwd(), "arquivos Mosaico")
-        os.makedirs(caminho_arquivos, exist_ok=True)
-        csv.to_csv(os.path.join(f"{caminho_arquivos}\{UFs[uf]}.csv"), index=False)
+        csv_df = extrai_csv(caminho_zip)
+        if csv_df is not None: 
+            # Instanciando a nova classe de processamento
+            processor = ProcessadorDadosAnatel()
+            # Chamando o método processar da instância da classe
+            csv_processed = processor.processar(csv_df)
+
+            # Criando pasta para armazenar os arquivos
+            caminho_arquivos = os.path.join(os.getcwd(), "arquivos Mosaico")
+            os.makedirs(caminho_arquivos, exist_ok=True)
+            # Salvando o DataFrame processado
+            csv_processed.to_csv(os.path.join(caminho_arquivos, f"{UFs[uf]}.csv"), index=False)
+            print(f"Arquivo {UFs[uf]}.csv processado e salvo.")
+        else:
+            print(f"Erro: Não foi possível extrair CSV do ZIP para UF {UFs[uf]}.")
+
         # Removendo pasta temp
-        shutil.rmtree(caminho_temp)
+        if os.path.exists(caminho_temp):
+            shutil.rmtree(caminho_temp)
+
 
 # Criando pasta para armazenar um arquivo completo com todas as UFs.
 caminho_concatenado = os.path.join(os.getcwd(), "Mosaico completo")
 os.makedirs(caminho_concatenado, exist_ok=True)
 # Concatenando os arquivos
-concatenado = concatenar_arquivos(caminho_arquivos)
-concatenado.to_csv(os.path.join(f"{caminho_concatenado}\Mosaico_Brasil.csv"), index=False)
+concatenado_df = concatenar_arquivos(caminho_arquivos)
+
+# Verifica se a concatenação foi bem-sucedida e se o DataFrame não está vazio
+if concatenado_df is not None and not concatenado_df.empty:
+    concatenado_df.to_csv(os.path.join(caminho_concatenado, "Mosaico_Brasil.csv"), index=False)
+    print("Arquivo Mosaico_Brasil.csv criado com sucesso!")
+else:
+    print("Não foi possível criar o arquivo Mosaico_Brasil.csv, pois nenhum dado válido foi concatenado.")
