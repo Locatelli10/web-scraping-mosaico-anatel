@@ -78,11 +78,17 @@ class ProcessadorDadosAnatel:
 
         return df_processado
 
-    def _remover_espacos(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove espaços em branco de todas as células e nomes de colunas."""
-        df = df.astype(str).map(str.strip)
+    def _limpar_espacos_em_branco(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove espaços em branco dos nomes das colunas e de células com texto."""
+        # Limpa os nomes das colunas
         df.columns = df.columns.str.strip()
+
+        # Limpa os valores das células que são strings (sem afetar números ou datas)
+        for col in df.select_dtypes(include=['object', 'string']).columns:
+            df[col] = df[col].astype(str).str.strip()
+
         return df
+
 
     def _selecionar_e_renomear_colunas(self, df: pd.DataFrame) -> pd.DataFrame:
         """Seleciona as colunas desejadas e as renomeia."""
