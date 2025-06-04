@@ -1,7 +1,26 @@
-# web-scraping-mosaico-anatel
-Neste repositório, realizaremos um web scraping no portal da Anatel. Mais especificamente, vamos extrair os dados do relatório "Mosaico", que nos mostrará onde as operadoras do país têm licenciado suas antenas de acesso móvel.
+# Web Scraping — Mosaico Anatel
 
-## Instruções de Utilização
+Este projeto realiza web scraping no portal da **Anatel**, extraindo os dados do relatório **Mosaico**, que detalha onde operadoras de telefonia móvel possuem antenas licenciadas em todo o Brasil.
+
+A coleta é feita de forma automatizada, estado por estado (UF), com limpeza e padronização dos dados para posterior análise.
+
+---
+
+# Funcionalidades
+
+- Acesso automatizado ao sistema [Mosaico](https://sistemas.anatel.gov.br/mosaico/).
+- Download dos arquivos `.csv` por Unidade da Federação (UF).
+- Processamento e padronização dos dados.
+- Geração de base final consolidada com informações por antena, tecnologia e município.
+
+---
+# Como Executar o Projeto
+
+0. Clone o repositório:
+   ```bash
+   git clone https://github.com/leonardolima123/projeto-A3/tree/main
+   cd projeto-A3
+   ```
 
 1. Crie o ambiente virtual:
    ```bash
@@ -22,3 +41,20 @@ Neste repositório, realizaremos um web scraping no portal da Anatel. Mais espec
    ```bash
    pip install -r requirements.txt
    ```
+4. iniciar o Projeto:
+   '''bash
+   python web_scraping.py
+   '''
+
+# Tecnologias Utilizadas
+Python 3.x
+
+Selenium WebDriver
+
+Pandas
+
+zipfile, shutil, os, datetime
+
+pytest (para testes)
+
+Git + GitHub
