@@ -78,17 +78,11 @@ class ProcessadorDadosAnatel:
 
         return df_processado
 
-    def _limpar_espacos_em_branco(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove espaços em branco dos nomes das colunas e de células com texto."""
-        # Limpa os nomes das colunas
+    def _remover_espacos(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove espaços em branco de todas as células e nomes de colunas."""
+        df = df.astype(str).map(str.strip)
         df.columns = df.columns.str.strip()
-
-        # Limpa os valores das células que são strings (sem afetar números ou datas)
-        for col in df.select_dtypes(include=['object', 'string']).columns:
-            df[col] = df[col].astype(str).str.strip()
-
         return df
-
 
     def _selecionar_e_renomear_colunas(self, df: pd.DataFrame) -> pd.DataFrame:
         """Seleciona as colunas desejadas e as renomeia."""
@@ -139,24 +133,14 @@ class ProcessadorDadosAnatel:
         return df
 
     def _padronizar_valores(self, df: pd.DataFrame) -> pd.DataFrame:
-    
-    # 1) Padronizar TipoInfra: se a coluna existe, preenche NaN por 'Nao Especificado'
+        """Padroniza valores em colunas específicas (TipoInfra, Operadora, Tecnologia)."""
         if 'TipoInfra' in df.columns:
-            df['TipoInfra'] = df['TipoInfra'].fillna('Nao Especificado')
-
-    # 2) Conjunto unificado de mapeamentos (coluna -> dicionário de substituição)
-        mapeamentos = {
-            'Operadora': self._MAPEAMENTO_OPERADORAS,
-            'Tecnologia': self._MAPEAMENTO_TECNOLOGIAS
-    }
-
-    # 3) Para cada coluna que existe, aplica replace() usando o dicionário
-        for coluna, mapa in mapeamentos.items():
-            if coluna in df.columns:
-                df[coluna] = df[coluna].replace(mapa)
-
+            df['TipoInfra'] = df['TipoInfra'].replace('nan', 'Nao Especificado')
+        if 'Operadora' in df.columns:
+            df['Operadora'] = df['Operadora'].replace(self._MAPEAMENTO_OPERADORAS)
+        if 'Tecnologia' in df.columns:
+            df['Tecnologia'] = df['Tecnologia'].replace(self._MAPEAMENTO_TECNOLOGIAS)
         return df
-
 
     def _adicionar_coluna_data_download(self, df: pd.DataFrame) -> pd.DataFrame:
         """Adiciona uma coluna com a data do download dos registros."""
