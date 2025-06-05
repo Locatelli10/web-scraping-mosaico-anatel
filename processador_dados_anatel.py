@@ -139,14 +139,24 @@ class ProcessadorDadosAnatel:
         return df
 
     def _padronizar_valores(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Padroniza valores em colunas específicas (TipoInfra, Operadora, Tecnologia)."""
+    
+    # 1) Padronizar TipoInfra: se a coluna existe, preenche NaN por 'Nao Especificado'
         if 'TipoInfra' in df.columns:
-            df['TipoInfra'] = df['TipoInfra'].replace('nan', 'Nao Especificado')
-        if 'Operadora' in df.columns:
-            df['Operadora'] = df['Operadora'].replace(self._MAPEAMENTO_OPERADORAS)
-        if 'Tecnologia' in df.columns:
-            df['Tecnologia'] = df['Tecnologia'].replace(self._MAPEAMENTO_TECNOLOGIAS)
+            df['TipoInfra'] = df['TipoInfra'].fillna('Nao Especificado')
+
+    # 2) Conjunto unificado de mapeamentos (coluna -> dicionário de substituição)
+        mapeamentos = {
+            'Operadora': self._MAPEAMENTO_OPERADORAS,
+            'Tecnologia': self._MAPEAMENTO_TECNOLOGIAS
+    }
+
+    # 3) Para cada coluna que existe, aplica replace() usando o dicionário
+        for coluna, mapa in mapeamentos.items():
+            if coluna in df.columns:
+                df[coluna] = df[coluna].replace(mapa)
+
         return df
+
 
     def _adicionar_coluna_data_download(self, df: pd.DataFrame) -> pd.DataFrame:
         """Adiciona uma coluna com a data do download dos registros."""
