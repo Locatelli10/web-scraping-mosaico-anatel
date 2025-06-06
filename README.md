@@ -42,7 +42,7 @@ A coleta é feita de forma automatizada, estado por estado (UF), com limpeza e p
    pip install -r requirements.txt
    ```
 4. iniciar o Projeto:
-   '''bash
+   ```bash
    python web_scraping.py
    '''
 
