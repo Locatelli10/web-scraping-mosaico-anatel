@@ -44,7 +44,7 @@ A coleta é feita de forma automatizada, estado por estado (UF), com limpeza e p
 4. iniciar o Projeto:
    ```bash
    python web_scraping.py
-   '''
+   ```
 
 # Tecnologias Utilizadas
 Python 3.x
