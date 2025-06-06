@@ -102,12 +102,13 @@ class ProcessadorDadosAnatel:
         Converte tipos de dados e trata valores ausentes/inválidos,
         removendo linhas problemáticas ou convertendo conforme o tipo.
         """
-        # Substituindo vírgula/ponto e vírgula por ponto para colunas numéricas antes da conversão
+        # 1. Pré-processamento de caracteres para colunas numéricas
         if 'AlturaAntena' in df.columns:
             df['AlturaAntena'] = df['AlturaAntena'].astype(str).str.replace('[,;]', '.', regex=True)
         if 'Frequencia' in df.columns:
             df['Frequencia'] = df['Frequencia'].astype(str).str.replace('[,;]', '.', regex=True)
-
+         
+        # 2. Conversão de tipos de dados
         for col, dtype in self._TIPAGEM_COLUNAS.items():
             if col not in df.columns:
                 continue
@@ -121,13 +122,25 @@ class ProcessadorDadosAnatel:
             else:
                 df[col] = df[col].astype(dtype)
 
-        # Descartando linhas com valores inválidos críticos (datas e numéricos essenciais)
-        df.dropna(subset=[
+        except Exception as e:
+                # Logar ou tratar erro de conversão se necessário, sem interromper o fluxo
+                print(f"Aviso: Não foi possível converter a coluna '{col}' para {dtype}. Erro: {e}")
+                # Manter o tipo original ou deixar como 'object' se a conversão falhar completamente
+
+        # 3. Tratamento de valores ausentes (NaN/NaT) após a conversão
+        # Definir quais colunas são críticas e devem ter NaN/NaT removidos
+        colunas_criticas_para_na = [
             'DataPrimeiroLicenciamento',
             'DataUltimoLicenciamento',
             'Frequencia',
             'AlturaAntena'
-        ], inplace=True)
+        ]
+           # Remover linhas onde as colunas críticas são NaN/NaT
+        df.dropna(subset=[col for col in colunas_criticas_para_na if col in df.columns], inplace=True)
+
+        # Exemplo: Preencher NaN em outras colunas se necessário (apenas um exemplo, ajuste conforme a necessidade)
+        # if 'NumEstacao' in df.columns:
+        #     df['NumEstacao'].fillna(0, inplace=True) # Preencher NumEstacao com 0 se for NaN
 
         return df
 
