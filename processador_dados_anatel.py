@@ -69,7 +69,7 @@ class ProcessadorDadosAnatel:
         """
         df_processado = df.copy()
 
-        df_processado = self._remover_espacos(df_processado)
+        df_processado = self._limpar_espacos_em_branco(df_processado)
         df_processado = self._selecionar_e_renomear_colunas(df_processado)
         df_processado = self._converter_tipos_e_tratar_ausentes(df_processado)
         df_processado = self._filtrar_dados(df_processado)
