@@ -1,7 +1,7 @@
 import os
 import shutil
 from scraping.download import download_arquivo
-from scraping.extrair import extrai_csv
+from scraping.extrair import extract_and_load_csv_from_zip
 from scraping.concatenador import concatenar_arquivos
 from processamento.processador_dados_anatel import ProcessadorDadosAnatel
 
@@ -29,7 +29,7 @@ for uf in qtd_estados:
         continue
 
     print("Sucesso no download!")
-    csv = extrai_csv(caminho_zip)
+    csv = extract_and_load_csv_from_zip(caminho_zip)
     if csv is not None:
         df = processador.processar(csv)
         df.to_csv(os.path.join(caminho_arquivos, f"{UFs[uf]}.csv"), index=False)
