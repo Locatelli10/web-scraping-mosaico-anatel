@@ -56,6 +56,13 @@ python web.py
 ```
 
 ---
+## Como executar os testes
+
+### 1. Para executar o arquivo *test_funcoes_processador.py*
+
+```bash
+python -m unittest test_funcoes_processador.py
+```
 
 ## Estrutura
 
